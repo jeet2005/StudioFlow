@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}Your Workspaces - Notion Clone{% endblock %}
+
+{% block content %}
+<div class="page-workspaces active p-8">
+    <div class="page-container max-w-6xl mx-auto">
+        <div class="page-header flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-900 tracking-tight leading-tight">Your Workspaces</h1>
+                <p class="text-gray-500 mt-2 text-lg">Manage and switch between your collaborative teams.</p>
+            </div>
+            <button
+                class="bg-teal-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-teal-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform active:scale-95"
+                onclick="createNewWorkspace()">
+                <i class="bi bi-plus-circle text-xl"></i> Create New Workspace
+            </button>
+        </div>
+
+        <div id="loadingState" class="text-center py-12">
+            <div class="spinner-border text-teal-600" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-gray-500 mt-4">Loading your workspaces...</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="workspaceGrid" style="display: none;">
+            <!-- Workspace cards will be injected here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.addEventListener('firebaseReady', async () => {
+        await loadWorkspaces();
+    });
+
+    async function loadWorkspaces() {
+        const grid = document.getElementById('workspaceGrid');
+        const loading = document.getElementById('loadingState');
+
+        try {
+            const workspaces = await window.firebaseService.listWorkspaces();
+
+            grid.innerHTML = '';
+
+            if (workspaces.length > 0) {
+                workspaces.forEach(ws => {
+                    const card = document.createElement('div');
+                    card.className = 'workspace-card bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all cursor-pointer group';
+                    card.onclick = () => switchToWorkspace(ws.id, ws.name);
+
+                    const isOwner = ws.role === 'owner';
+                    const roleColor = isOwner ? 'teal' : 'blue';
+
+                    card.innerHTML = `
+                        <div class="w-16 h-16 bg-${roleColor}-50 text-${roleColor}-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-${roleColor}-600 group-hover:text-white transition-all transform group-hover:rotate-6">
+                            <i class="bi ${isOwner ? 'bi-grid-1x2-fill' : 'bi-people-fill'} text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${ws.name}</h3>
+                        <p class="text-gray-500 font-medium">${isOwner ? 'Owner' : 'Member'}</p>
+                        <div class="mt-8 flex items-center text-teal-600 font-bold gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Open Workspace <i class="bi bi-arrow-right"></i>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            // Add "Create New" card
+            const addCard = document.createElement('div');
+            addCard.className = 'workspace-card bg-gray-50 p-8 rounded-[2rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center hover:border-teal-400 hover:bg-teal-50 transition-all cursor-pointer group min-h-[200px]';
+            addCard.onclick = createNewWorkspace;
+            addCard.innerHTML = `
+                <div class="w-16 h-16 bg-white text-gray-400 rounded-2xl flex items-center justify-center mb-4 group-hover:text-teal-600 transition-colors shadow-sm">
+                    <i class="bi bi-plus-lg text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-400 group-hover:text-teal-900 transition-colors">Create New</h3>
+            `;
+            grid.appendChild(addCard);
+
+            loading.style.display = 'none';
+            grid.style.display = 'grid';
+
+        } catch (e) {
+            console.error('Error loading workspaces:', e);
+            loading.innerHTML = '<p class="text-red-500">Failed to load workspaces</p>';
+        }
+    }
+
+    function switchToWorkspace(id, name) {
+        window.firebaseService.setCurrentWorkspace(id);
+
+        // Show toast
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 bg-teal-600 text-white px-6 py-3 rounded-xl shadow-lg z-50';
+        toast.textContent = `Switching to "${name}"...`;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            window.location.href = '/app/workspace';
+        }, 500);
+    }
+
+    async function createNewWorkspace() {
+        const name = prompt("Enter new workspace name:");
+        if (name && name.trim()) {
+            try {
+                const result = await window.firebaseService.createWorkspace(name.trim());
+                console.log('Created workspace:', result);
+
+                // Switch to the new workspace
+                switchToWorkspace(result.id, result.name);
+            } catch (e) {
+                console.error('Error creating workspace:', e);
+                alert('Failed to create workspace');
+            }
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,1352 @@
+{% extends "layout.html" %}
+
+{% block title %}Workspace - StudioFlow{% endblock %}
+
+{% block content %}
+<style>
+    /* Notion-style Workspace Overrides */
+    .workspace-editor {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 60px 96px;
+    }
+
+    .page-title {
+        font-size: 40px;
+        font-weight: 700;
+        border: none;
+        outline: none;
+        width: 100%;
+        background: transparent;
+        color: var(--text-primary);
+        margin-bottom: 24px;
+    }
+
+    .page-title::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.5;
+    }
+
+    /* Content Blocks */
+    .block {
+        position: relative;
+        padding: 4px 0;
+        margin: 2px 0;
+        transition: background 0.15s, transform 0.2s;
+    }
+
+    .block:hover {
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    .block.dragging {
+        opacity: 0.5;
+        transform: scale(1.02);
+        background: var(--bg-hover);
+    }
+
+    .block.drag-over {
+        border-top: 2px solid var(--accent-color);
+    }
+
+    .block:hover .block-handle {
+        opacity: 1;
+    }
+
+    .block-handle {
+        position: absolute;
+        left: -36px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+
+    .handle-btn {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .handle-btn:hover {
+        background: var(--bg-hover);
+        color: var(--accent-color);
+    }
+
+    .drag-handle {
+        cursor: grab;
+    }
+
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+
+    .block-content {
+        min-height: 24px;
+        outline: none;
+        line-height: 1.6;
+    }
+
+    .block-content:empty::before {
+        content: attr(data-placeholder);
+        color: var(--text-secondary);
+        opacity: 0.5;
+    }
+
+    /* Block Types */
+    .block-h1 .block-content {
+        font-size: 30px;
+        font-weight: 700;
+        margin: 20px 0 8px;
+    }
+
+    .block-h2 .block-content {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 16px 0 6px;
+    }
+
+    .block-h3 .block-content {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 12px 0 4px;
+    }
+
+    .block-quote {
+        border-left: 3px solid var(--text-primary);
+        padding-left: 16px;
+    }
+
+    .block-quote .block-content {
+        color: var(--text-secondary);
+    }
+
+    .block-code {
+        background: var(--bg-secondary);
+        border-radius: 6px;
+        padding: 16px;
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 14px;
+    }
+
+    .block-divider {
+        height: 1px;
+        background: var(--border-color);
+        margin: 16px 0;
+    }
+
+    /* Lists */
+    .block-bullet,
+    .block-numbered {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .list-marker {
+        min-width: 24px;
+        color: var(--text-secondary);
+        user-select: none;
+        text-align: right;
+        padding-right: 4px;
+    }
+
+    /* Todo */
+    .block-todo {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .todo-checkbox {
+        width: 16px;
+        height: 16px;
+        margin-top: 4px;
+        cursor: pointer;
+        accent-color: var(--accent-color);
+    }
+
+    .todo-done .block-content {
+        text-decoration: line-through;
+        color: var(--text-secondary);
+    }
+
+    /* Tables */
+    .block-table table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+    }
+
+    .block-table th,
+    .block-table td {
+        border: 1px solid var(--border-color);
+        padding: 8px 12px;
+        text-align: left;
+        min-width: 100px;
+    }
+
+    .block-table th {
+        background: var(--bg-secondary);
+        font-weight: 600;
+    }
+
+    .block-table td[contenteditable]:focus {
+        background: var(--bg-hover);
+        outline: none;
+    }
+
+    .table-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .table-action-btn {
+        padding: 4px 12px;
+        font-size: 12px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+        color: var(--text-secondary);
+    }
+
+    .table-action-btn:hover {
+        background: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+    }
+
+    /* Slash Command Menu */
+    #slashMenu {
+        position: fixed;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        width: 320px;
+        max-height: 400px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+    }
+
+    #slashMenu.show {
+        display: block;
+    }
+
+    .slash-menu-header {
+        padding: 8px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .slash-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: background 0.1s;
+    }
+
+    .slash-menu-item:hover,
+    .slash-menu-item.selected {
+        background: var(--bg-hover);
+    }
+
+    .slash-menu-item-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 18px;
+    }
+
+    .slash-menu-item-info h4 {
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    .slash-menu-item-info p {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin: 0;
+    }
+
+    /* Context Menu */
+    #contextMenu {
+        position: fixed;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+        min-width: 180px;
+        z-index: 2000;
+        display: none;
+        padding: 4px;
+    }
+
+    #contextMenu.show {
+        display: block;
+    }
+
+    .context-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 13px;
+        color: var(--text-primary);
+    }
+
+    .context-menu-item:hover {
+        background: var(--bg-hover);
+    }
+
+    .context-menu-item.danger {
+        color: #ef4444;
+    }
+
+    .context-menu-item.danger:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    .context-menu-divider {
+        height: 1px;
+        background: var(--border-color);
+        margin: 4px 0;
+    }
+
+    /* Graph Container */
+    .graph-container {
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        padding: 20px;
+        margin: 16px 0;
+        position: relative;
+    }
+
+    .graph-canvas {
+        width: 100%;
+        height: 300px;
+        background: var(--bg-primary);
+        border-radius: 6px;
+    }
+
+    .graph-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        gap: 4px;
+    }
+
+    .graph-action-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .graph-action-btn:hover {
+        background: var(--accent-color);
+        color: white;
+    }
+
+    /* Toolbar */
+    .workspace-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 24px;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-primary);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .toolbar-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .toolbar-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .toolbar-btn.primary {
+        background: var(--accent-color);
+        color: white;
+    }
+
+    .toolbar-btn.primary:hover {
+        opacity: 0.9;
+    }
+
+    .save-status {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .autosave-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #22c55e;
+    }
+</style>
+
+<div class="page-workspace active">
+    <!-- Toolbar -->
+    <div class="workspace-toolbar">
+        <div class="toolbar-left">
+            <button class="toolbar-btn" onclick="document.getElementById('csvInput').click()">
+                <i class="bi bi-upload"></i> Import CSV
+            </button>
+            <input type="file" id="csvInput" accept=".csv" style="display:none">
+            <button class="toolbar-btn" onclick="exportPDF()"><i class="bi bi-file-pdf"></i> Export PDF</button>
+            <button class="toolbar-btn" onclick="exportCSV()"><i class="bi bi-file-earmark-spreadsheet"></i> Export
+                CSV</button>
+            <button class="toolbar-btn" data-bs-toggle="modal" data-bs-target="#graphModal"><i
+                    class="bi bi-bar-chart"></i> Add Graph</button>
+        </div>
+        <div class="toolbar-right">
+            <div class="save-status" id="saveStatus">
+                <div class="autosave-dot"></div>
+                <span>Auto-saving enabled</span>
+            </div>
+            <button class="toolbar-btn primary" onclick="saveWorkspace()"><i class="bi bi-cloud-check"></i> Save
+                Now</button>
+        </div>
+    </div>
+
+    <!-- Workspace Editor -->
+    <div class="workspace-editor" id="workspace">
+        <input type="text" class="page-title" placeholder="Untitled" id="pageTitle" value="My Workspace"
+            oninput="scheduleAutoSave()">
+        <div id="blocksContainer"></div>
+        <div class="block" id="newBlockPlaceholder">
+            <div class="block-content" contenteditable="true" data-placeholder="Type '/' for commands..."
+                onkeydown="handleKeyDown(event, this)" oninput="handleInput(event, this)"></div>
+        </div>
+    </div>
+
+    <!-- Slash Command Menu -->
+    <div id="slashMenu">
+        <div class="slash-menu-header">Basic Blocks</div>
+        <div class="slash-menu-item" data-type="text">
+            <div class="slash-menu-item-icon"><i class="bi bi-text-paragraph"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Text</h4>
+                <p>Plain text block</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="h1">
+            <div class="slash-menu-item-icon"><i class="bi bi-type-h1"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Heading 1</h4>
+                <p>Large section heading</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="h2">
+            <div class="slash-menu-item-icon"><i class="bi bi-type-h2"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Heading 2</h4>
+                <p>Medium section heading</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="h3">
+            <div class="slash-menu-item-icon"><i class="bi bi-type-h3"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Heading 3</h4>
+                <p>Small section heading</p>
+            </div>
+        </div>
+        <div class="slash-menu-header">Lists</div>
+        <div class="slash-menu-item" data-type="bullet">
+            <div class="slash-menu-item-icon"><i class="bi bi-list-ul"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Bullet List</h4>
+                <p>Simple bulleted list</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="numbered">
+            <div class="slash-menu-item-icon"><i class="bi bi-list-ol"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Numbered List</h4>
+                <p>Numbered list item</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="todo">
+            <div class="slash-menu-item-icon"><i class="bi bi-check-square"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>To-do</h4>
+                <p>Task with checkbox</p>
+            </div>
+        </div>
+        <div class="slash-menu-header">Advanced</div>
+        <div class="slash-menu-item" data-type="quote">
+            <div class="slash-menu-item-icon"><i class="bi bi-quote"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Quote</h4>
+                <p>Capture a quote</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="code">
+            <div class="slash-menu-item-icon"><i class="bi bi-code-slash"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Code</h4>
+                <p>Code snippet block</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="table">
+            <div class="slash-menu-item-icon"><i class="bi bi-table"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Table</h4>
+                <p>Add a table</p>
+            </div>
+        </div>
+        <div class="slash-menu-item" data-type="divider">
+            <div class="slash-menu-item-icon"><i class="bi bi-dash-lg"></i></div>
+            <div class="slash-menu-item-info">
+                <h4>Divider</h4>
+                <p>Visual divider line</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu">
+        <div class="context-menu-item" onclick="contextCopy()"><i class="bi bi-clipboard"></i> Copy</div>
+        <div class="context-menu-item" onclick="contextCut()"><i class="bi bi-scissors"></i> Cut</div>
+        <div class="context-menu-item" onclick="contextPaste()"><i class="bi bi-clipboard-check"></i> Paste</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger" onclick="contextDelete()"><i class="bi bi-trash"></i> Delete</div>
+    </div>
+</div>
+
+<!-- Graph Modal -->
+<div class="modal fade" id="graphModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Graph</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Chart Type</label>
+                        <select class="form-select" id="chartType">
+                            <option value="bar">Bar Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="doughnut">Doughnut Chart</option>
+                            <option value="radar">Radar Chart</option>
+                            <option value="polarArea">Polar Area Chart</option>
+                            <option value="scatter">Scatter Plot</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Data Source</label>
+                        <select class="form-select" id="dataSource">
+                            <option value="manual">Enter Manually</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="manualDataInput">
+                    <div class="mb-3">
+                        <label class="form-label">Data Labels (comma-separated)</label>
+                        <input type="text" class="form-control" id="chartLabels" placeholder="Jan, Feb, Mar, Apr, May">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Data Values (comma-separated)</label>
+                        <input type="text" class="form-control" id="chartValues" placeholder="10, 25, 15, 30, 20">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Chart Title</label>
+                    <input type="text" class="form-control" id="chartTitle" placeholder="My Chart">
+                </div>
+                <canvas id="previewChart" height="200"></canvas>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="insertGraph()">Insert Graph</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let blockCounter = 0;
+    let previewChartInstance = null;
+    const slashMenu = document.getElementById('slashMenu');
+    const contextMenu = document.getElementById('contextMenu');
+    let activeInput = null;
+    let selectedMenuIndex = 0;
+    let autoSaveTimer = null;
+    let contextTargetBlock = null;
+    let clipboardBlock = null;
+    let clipboardAction = null; // 'copy' or 'cut'
+    let draggedBlock = null;
+    const AUTO_SAVE_DELAY = 2000;
+
+    window.addEventListener('firebaseReady', async () => {
+        await loadWorkspaceFromFirebase();
+        populateTableDataSources();
+    });
+
+    // =====================
+    // Auto-Save System
+    // =====================
+    function scheduleAutoSave() {
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        updateSaveStatus('saving');
+        autoSaveTimer = setTimeout(async () => { await saveWorkspace(true); }, AUTO_SAVE_DELAY);
+    }
+
+    function updateSaveStatus(status, message = null) {
+        const statusEl = document.getElementById('saveStatus');
+        const dot = statusEl.querySelector('.autosave-dot');
+        const text = statusEl.querySelector('span');
+        switch (status) {
+            case 'saving': dot.style.background = '#f59e0b'; text.textContent = 'Saving...'; break;
+            case 'saved': dot.style.background = '#22c55e'; text.textContent = message || 'All changes saved'; break;
+            case 'error': dot.style.background = '#ef4444'; text.textContent = message || 'Save failed'; break;
+            default: dot.style.background = '#22c55e'; text.textContent = 'Auto-saving enabled';
+        }
+    }
+
+    // =====================
+    // Context Menu (Right-Click)
+    // =====================
+    document.getElementById('blocksContainer').addEventListener('contextmenu', (e) => {
+        const block = e.target.closest('.block');
+        if (block) {
+            e.preventDefault();
+            contextTargetBlock = block;
+            contextMenu.style.top = `${e.clientY}px`;
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.classList.add('show');
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target)) {
+            contextMenu.classList.remove('show');
+        }
+        if (!slashMenu.contains(e.target) && !e.target.classList.contains('block-content')) {
+            hideSlashMenu();
+        }
+    });
+
+    function contextCopy() {
+        if (contextTargetBlock) {
+            clipboardBlock = contextTargetBlock.cloneNode(true);
+            clipboardAction = 'copy';
+            contextMenu.classList.remove('show');
+        }
+    }
+
+    function contextCut() {
+        if (contextTargetBlock) {
+            clipboardBlock = contextTargetBlock.cloneNode(true);
+            clipboardAction = 'cut';
+            contextTargetBlock.remove();
+            contextMenu.classList.remove('show');
+            scheduleAutoSave();
+        }
+    }
+
+    function contextPaste() {
+        if (clipboardBlock && contextTargetBlock) {
+            const newBlock = clipboardBlock.cloneNode(true);
+            newBlock.id = `block-${++blockCounter}`;
+            setupBlockEvents(newBlock);
+            contextTargetBlock.after(newBlock);
+            contextMenu.classList.remove('show');
+            scheduleAutoSave();
+        }
+    }
+
+    function contextDelete() {
+        if (contextTargetBlock && contextTargetBlock.id !== 'newBlockPlaceholder') {
+            contextTargetBlock.remove();
+            contextMenu.classList.remove('show');
+            scheduleAutoSave();
+        }
+    }
+
+    // =====================
+    // Drag and Drop
+    // =====================
+    function setupDragDrop(block) {
+        const dragHandle = block.querySelector('.drag-handle');
+        if (!dragHandle) return;
+
+        dragHandle.addEventListener('mousedown', () => { block.draggable = true; });
+        dragHandle.addEventListener('mouseup', () => { block.draggable = false; });
+
+        block.addEventListener('dragstart', (e) => {
+            draggedBlock = block;
+            block.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        block.addEventListener('dragend', () => {
+            block.classList.remove('dragging');
+            block.draggable = false;
+            draggedBlock = null;
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            scheduleAutoSave();
+        });
+
+        block.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (draggedBlock && draggedBlock !== block) {
+                block.classList.add('drag-over');
+            }
+        });
+
+        block.addEventListener('dragleave', () => { block.classList.remove('drag-over'); });
+
+        block.addEventListener('drop', (e) => {
+            e.preventDefault();
+            block.classList.remove('drag-over');
+            if (draggedBlock && draggedBlock !== block) {
+                const container = document.getElementById('blocksContainer');
+                const allBlocks = [...container.children];
+                const draggedIdx = allBlocks.indexOf(draggedBlock);
+                const targetIdx = allBlocks.indexOf(block);
+                if (draggedIdx < targetIdx) {
+                    block.after(draggedBlock);
+                } else {
+                    block.before(draggedBlock);
+                }
+            }
+        });
+    }
+
+    // =====================
+    // Slash Command Menu
+    // =====================
+    function showSlashMenu(input) {
+        const rect = input.getBoundingClientRect();
+        slashMenu.style.top = `${rect.bottom + window.scrollY + 8}px`;
+        slashMenu.style.left = `${rect.left + window.scrollX}px`;
+        slashMenu.classList.add('show');
+        activeInput = input;
+        selectedMenuIndex = 0;
+        updateMenuSelection();
+    }
+
+    function hideSlashMenu() { slashMenu.classList.remove('show'); activeInput = null; }
+
+    function updateMenuSelection() {
+        const items = slashMenu.querySelectorAll('.slash-menu-item');
+        items.forEach((item, index) => item.classList.toggle('selected', index === selectedMenuIndex));
+    }
+
+    document.querySelectorAll('.slash-menu-item').forEach((item, index) => {
+        item.addEventListener('click', () => { if (activeInput) insertBlock(item.dataset.type, activeInput); });
+        item.addEventListener('mouseenter', () => { selectedMenuIndex = index; updateMenuSelection(); });
+    });
+
+    function handleInput(event, input) {
+        scheduleAutoSave();
+        if (input.textContent === '/') showSlashMenu(input);
+        else if (!input.textContent.startsWith('/')) hideSlashMenu();
+    }
+
+    function handleKeyDown(event, input) {
+        const block = input.closest('.block');
+
+        if (slashMenu.classList.contains('show')) {
+            const items = slashMenu.querySelectorAll('.slash-menu-item');
+            if (event.key === 'ArrowDown') { event.preventDefault(); selectedMenuIndex = (selectedMenuIndex + 1) % items.length; updateMenuSelection(); }
+            else if (event.key === 'ArrowUp') { event.preventDefault(); selectedMenuIndex = (selectedMenuIndex - 1 + items.length) % items.length; updateMenuSelection(); }
+            else if (event.key === 'Enter') { event.preventDefault(); insertBlock(items[selectedMenuIndex].dataset.type, input); }
+            else if (event.key === 'Escape') hideSlashMenu();
+        } else if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+
+            // MS Word-style list continuation
+            if (block && (block.classList.contains('block-bullet') || block.classList.contains('block-numbered'))) {
+                const isBullet = block.classList.contains('block-bullet');
+                const content = input.textContent.trim();
+
+                if (content === '') {
+                    // Empty list item - convert to text block
+                    convertToTextBlock(block);
+                } else {
+                    // Continue the list
+                    const newBlock = isBullet ? createListBlock('bullet') : createListBlock('numbered');
+
+                    // Update numbering for numbered lists
+                    if (!isBullet) {
+                        const currentNum = parseInt(block.querySelector('.list-marker').textContent) || 1;
+                        newBlock.querySelector('.list-marker').textContent = (currentNum + 1) + '.';
+                    }
+
+                    block.after(newBlock);
+                    newBlock.querySelector('[contenteditable]').focus();
+                }
+            } else if (block && block.classList.contains('block-todo')) {
+                const content = input.textContent.trim();
+                if (content === '') {
+                    convertToTextBlock(block);
+                } else {
+                    const newBlock = createTodoBlock();
+                    block.after(newBlock);
+                    newBlock.querySelector('[contenteditable]').focus();
+                }
+            } else {
+                createNewBlock();
+            }
+        } else if (event.key === 'Backspace' && input.textContent === '') {
+            event.preventDefault();
+            if (block && (block.classList.contains('block-bullet') || block.classList.contains('block-numbered') || block.classList.contains('block-todo'))) {
+                convertToTextBlock(block);
+            } else {
+                deleteBlock(block);
+            }
+        }
+    }
+
+    function convertToTextBlock(block) {
+        const textBlock = createTextBlock();
+        block.after(textBlock);
+        block.remove();
+        textBlock.querySelector('[contenteditable]').focus();
+    }
+
+    // =====================
+    // Block Management
+    // =====================
+    function setupBlockEvents(block) {
+        const content = block.querySelector('.block-content');
+        if (content && content.getAttribute('contenteditable') === 'true') {
+            content.addEventListener('keydown', (e) => handleKeyDown(e, content));
+            content.addEventListener('input', (e) => handleInput(e, content));
+        }
+
+        // Setup drag-drop for this block
+        setupDragDrop(block);
+    }
+
+    function insertBlock(type, targetInput) {
+        hideSlashMenu();
+        targetInput.textContent = '';
+        const container = document.getElementById('blocksContainer');
+        let newBlock;
+        switch (type) {
+            case 'text': newBlock = createTextBlock(); break;
+            case 'h1': newBlock = createHeadingBlock(1); break;
+            case 'h2': newBlock = createHeadingBlock(2); break;
+            case 'h3': newBlock = createHeadingBlock(3); break;
+            case 'bullet': newBlock = createListBlock('bullet'); break;
+            case 'numbered': newBlock = createListBlock('numbered'); break;
+            case 'todo': newBlock = createTodoBlock(); break;
+            case 'quote': newBlock = createQuoteBlock(); break;
+            case 'code': newBlock = createCodeBlock(); break;
+            case 'table': newBlock = createTableBlock(); break;
+            case 'divider': newBlock = createDividerBlock(); break;
+        }
+        if (newBlock) { container.appendChild(newBlock); newBlock.querySelector('[contenteditable="true"]')?.focus(); }
+        scheduleAutoSave();
+    }
+
+    function createBlockWrapper(className = '') {
+        const block = document.createElement('div');
+        block.className = `block ${className}`;
+        block.id = `block-${++blockCounter}`;
+        block.innerHTML = `
+            <div class="block-handle">
+                <button class="handle-btn drag-handle" title="Drag to reorder"><i class="bi bi-grip-vertical"></i></button>
+            </div>
+        `;
+        setupDragDrop(block);
+        return block;
+    }
+
+    function createTextBlock(text = '') {
+        const block = createBlockWrapper();
+        const content = document.createElement('div');
+        content.className = 'block-content'; content.contentEditable = true; content.textContent = text;
+        content.setAttribute('data-placeholder', 'Type something...');
+        content.addEventListener('keydown', (e) => handleKeyDown(e, content));
+        content.addEventListener('input', (e) => handleInput(e, content));
+        block.appendChild(content);
+        return block;
+    }
+
+    function createHeadingBlock(level, text = '') {
+        const block = createBlockWrapper(`block-h${level}`);
+        const content = document.createElement('div');
+        content.className = 'block-content'; content.contentEditable = true; content.textContent = text;
+        content.setAttribute('data-placeholder', `Heading ${level}`);
+        content.addEventListener('keydown', (e) => handleKeyDown(e, content));
+        content.addEventListener('input', (e) => handleInput(e, content));
+        block.appendChild(content);
+        return block;
+    }
+
+    function createListBlock(type, text = '', number = 1) {
+        const block = createBlockWrapper(`block-${type}`);
+        const marker = document.createElement('span');
+        marker.className = 'list-marker';
+        marker.textContent = type === 'bullet' ? '•' : number + '.';
+        const content = document.createElement('div');
+        content.className = 'block-content'; content.contentEditable = true; content.textContent = text;
+        content.setAttribute('data-placeholder', 'List item');
+        content.addEventListener('keydown', (e) => handleKeyDown(e, content));
+        content.addEventListener('input', (e) => handleInput(e, content));
+        block.appendChild(marker); block.appendChild(content);
+        return block;
+    }
+
+    function createTodoBlock(text = '', checked = false) {
+        const block = createBlockWrapper('block-todo');
+        if (checked) block.classList.add('todo-done');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox'; checkbox.className = 'todo-checkbox'; checkbox.checked = checked;
+        checkbox.addEventListener('change', () => { block.classList.toggle('todo-done', checkbox.checked); scheduleAutoSave(); });
+        const content = document.createElement('div');
+        content.className = 'block-content'; content.contentEditable = true; content.textContent = text;
+        content.setAttribute('data-placeholder', 'To-do item');
+        content.addEventListener('keydown', (e) => handleKeyDown(e, content));
+        content.addEventListener('input', (e) => handleInput(e, content));
+        block.appendChild(checkbox); block.appendChild(content);
+        return block;
+    }
+
+    function createQuoteBlock(text = '') {
+        const block = createBlockWrapper('block-quote');
+        const content = document.createElement('div');
+        content.className = 'block-content'; content.contentEditable = true; content.textContent = text;
+        content.addEventListener('keydown', (e) => handleKeyDown(e, content));
+        content.addEventListener('input', (e) => handleInput(e, content));
+        block.appendChild(content);
+        return block;
+    }
+
+    function createCodeBlock(text = '') {
+        const block = createBlockWrapper('block-code');
+        const content = document.createElement('pre');
+        content.className = 'block-content'; content.contentEditable = true; content.textContent = text;
+        content.addEventListener('input', () => scheduleAutoSave());
+        block.appendChild(content);
+        return block;
+    }
+
+    function createTableBlock(data = null) {
+        const block = createBlockWrapper('block-table');
+        block.dataset.tableId = `table-${blockCounter}`;
+
+        const table = document.createElement('table');
+        const rows = data ? data.length : 3;
+        const cols = data ? data[0].length : 3;
+        for (let i = 0; i < rows; i++) {
+            const tr = document.createElement('tr');
+            for (let j = 0; j < cols; j++) {
+                const cell = document.createElement(i === 0 ? 'th' : 'td');
+                cell.contentEditable = true;
+                cell.textContent = data ? data[i][j] : (i === 0 ? `Column ${j + 1}` : '');
+                cell.addEventListener('input', () => { scheduleAutoSave(); populateTableDataSources(); });
+                tr.appendChild(cell);
+            }
+            table.appendChild(tr);
+        }
+        block.appendChild(table);
+
+        // Add table actions
+        const actions = document.createElement('div');
+        actions.className = 'table-actions';
+        actions.innerHTML = `
+            <button class="table-action-btn" onclick="createGraphFromTable('${block.dataset.tableId}')">
+                <i class="bi bi-bar-chart"></i> Create Graph
+            </button>
+        `;
+        block.appendChild(actions);
+
+        return block;
+    }
+
+    function createDividerBlock() {
+        const block = createBlockWrapper();
+        const divider = document.createElement('div');
+        divider.className = 'block-divider';
+        block.appendChild(divider);
+        return block;
+    }
+
+    function createGraphBlock(chartType, labels, values, title) {
+        const block = createBlockWrapper();
+        const container = document.createElement('div');
+        container.className = 'graph-container';
+
+        // Graph action buttons
+        const actions = document.createElement('div');
+        actions.className = 'graph-actions';
+        actions.innerHTML = `
+            <button class="graph-action-btn" onclick="exportGraphAs(this, 'png')">PNG</button>
+            <button class="graph-action-btn" onclick="exportGraphAs(this, 'jpg')">JPG</button>
+            <button class="graph-action-btn" onclick="exportGraphAs(this, 'svg')">SVG</button>
+        `;
+        container.appendChild(actions);
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'graph-canvas';
+        container.appendChild(canvas);
+        block.appendChild(container);
+
+        setTimeout(() => {
+            new Chart(canvas, {
+                type: chartType,
+                data: { labels: labels, datasets: [{ label: title, data: values, backgroundColor: ['rgba(13, 148, 136, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(241, 196, 15, 0.7)', 'rgba(231, 76, 60, 0.7)', 'rgba(155, 89, 182, 0.7)', 'rgba(52, 152, 219, 0.7)', 'rgba(230, 126, 34, 0.7)'], borderColor: ['rgb(13, 148, 136)', 'rgb(46, 204, 113)', 'rgb(241, 196, 15)', 'rgb(231, 76, 60)', 'rgb(155, 89, 182)', 'rgb(52, 152, 219)', 'rgb(230, 126, 34)'], borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: title } } }
+            });
+        }, 100);
+        return block;
+    }
+
+    function exportGraphAs(btn, format) {
+        const container = btn.closest('.graph-container');
+        const canvas = container.querySelector('canvas');
+        const title = 'chart';
+
+        if (format === 'svg') {
+            // For SVG, we need to use a library or backend - for now use PNG
+            alert('SVG export requires server-side processing. Exporting as PNG instead.');
+            format = 'png';
+        }
+
+        const link = document.createElement('a');
+        link.download = `${title}.${format}`;
+        link.href = canvas.toDataURL(`image/${format === 'jpg' ? 'jpeg' : format}`);
+        link.click();
+    }
+
+    function deleteBlock(block) {
+        if (block && block.id !== 'newBlockPlaceholder') {
+            block.remove();
+            scheduleAutoSave();
+        }
+    }
+
+    function createNewBlock() {
+        const container = document.getElementById('blocksContainer');
+        const newBlock = createTextBlock();
+        container.appendChild(newBlock);
+        newBlock.querySelector('[contenteditable]').focus();
+    }
+
+    // =====================
+    // Graph from Table
+    // =====================
+    function populateTableDataSources() {
+        const select = document.getElementById('dataSource');
+        if (!select) return;
+
+        const tables = document.querySelectorAll('.block-table');
+        select.innerHTML = '<option value="manual">Enter Manually</option>';
+
+        tables.forEach((table, idx) => {
+            const tableEl = table.querySelector('table');
+            if (tableEl) {
+                const firstHeader = tableEl.querySelector('th')?.textContent || `Table ${idx + 1}`;
+                select.innerHTML += `<option value="${table.dataset.tableId}">Table: ${firstHeader}</option>`;
+            }
+        });
+    }
+
+    function createGraphFromTable(tableId) {
+        const block = document.querySelector(`[data-table-id="${tableId}"]`);
+        if (!block) return;
+
+        const table = block.querySelector('table');
+        const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+        const rows = table.querySelectorAll('tr:not(:first-child)');
+
+        if (headers.length < 2) {
+            alert('Table needs at least 2 columns to create a graph');
+            return;
+        }
+
+        // Use first column as labels, second column as values
+        const labels = [];
+        const values = [];
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 2) {
+                labels.push(cells[0].textContent);
+                values.push(parseFloat(cells[1].textContent) || 0);
+            }
+        });
+
+        const graphBlock = createGraphBlock('bar', labels, values, headers[1] || 'Data');
+        block.after(graphBlock);
+        scheduleAutoSave();
+    }
+
+    document.getElementById('dataSource')?.addEventListener('change', (e) => {
+        const manualInput = document.getElementById('manualDataInput');
+        if (e.target.value === 'manual') {
+            manualInput.style.display = 'block';
+        } else {
+            manualInput.style.display = 'none';
+            // Auto-fill from table
+            const tableId = e.target.value;
+            const block = document.querySelector(`[data-table-id="${tableId}"]`);
+            if (block) {
+                const table = block.querySelector('table');
+                const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+                const rows = table.querySelectorAll('tr:not(:first-child)');
+                const labels = [];
+                const values = [];
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 2) {
+                        labels.push(cells[0].textContent);
+                        values.push(cells[1].textContent);
+                    }
+                });
+                document.getElementById('chartLabels').value = labels.join(', ');
+                document.getElementById('chartValues').value = values.join(', ');
+                document.getElementById('chartTitle').value = headers[1] || 'Chart';
+                updatePreviewChart();
+            }
+        }
+    });
+
+    // =====================
+    // Firebase Save/Load
+    // =====================
+    function getBlocksData() {
+        const blocks = [];
+        document.querySelectorAll('#blocksContainer .block').forEach(block => {
+            const content = block.querySelector('.block-content');
+            const table = block.querySelector('table');
+            const checkbox = block.querySelector('.todo-checkbox');
+
+            if (table) {
+                const tableData = Array.from(table.querySelectorAll('tr')).map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.textContent));
+                blocks.push({ type: 'table', data: tableData });
+            } else if (block.querySelector('.block-divider')) {
+                blocks.push({ type: 'divider' });
+            } else if (block.querySelector('.graph-container')) {
+                blocks.push({ type: 'graph' }); // Graphs are recreated, not saved
+            } else if (checkbox) {
+                blocks.push({ type: 'todo', content: content?.textContent || '', checked: checkbox.checked });
+            } else if (content) {
+                let type = 'text';
+                if (block.classList.contains('block-h1')) type = 'h1';
+                else if (block.classList.contains('block-h2')) type = 'h2';
+                else if (block.classList.contains('block-h3')) type = 'h3';
+                else if (block.classList.contains('block-bullet')) type = 'bullet';
+                else if (block.classList.contains('block-numbered')) type = 'numbered';
+                else if (block.classList.contains('block-quote')) type = 'quote';
+                else if (block.classList.contains('block-code')) type = 'code';
+                blocks.push({ type, content: content.textContent });
+            }
+        });
+        return blocks;
+    }
+
+    async function saveWorkspace(silent = false) {
+        const workspaceId = window.firebaseService?.getCurrentWorkspaceId();
+        if (!workspaceId) {
+            if (!silent) { alert('No workspace selected.'); window.location.href = '/app/workspaces'; }
+            return;
+        }
+        const title = document.getElementById('pageTitle').value || 'Untitled';
+        const blocks = getBlocksData();
+        try {
+            await window.firebaseService.saveWorkspaceContent(workspaceId, { title, blocks });
+            updateSaveStatus('saved');
+            setTimeout(() => updateSaveStatus('default'), 3000);
+        } catch (e) { console.error('Save failed:', e); updateSaveStatus('error', 'Save failed'); }
+    }
+
+    async function loadWorkspaceFromFirebase() {
+        let workspaceId = window.firebaseService?.getCurrentWorkspaceId();
+        if (!workspaceId) {
+            const workspaces = await window.firebaseService.listWorkspaces();
+            if (workspaces.length > 0) { workspaceId = workspaces[0].id; window.firebaseService.setCurrentWorkspace(workspaceId); }
+            else { const newWs = await window.firebaseService.createWorkspace('My First Workspace'); workspaceId = newWs.id; window.firebaseService.setCurrentWorkspace(workspaceId); }
+        }
+        try {
+            const data = await window.firebaseService.loadWorkspaceContent(workspaceId);
+            document.getElementById('pageTitle').value = data.title || 'Untitled';
+            const container = document.getElementById('blocksContainer');
+            container.innerHTML = '';
+            if (data.blocks && data.blocks.length > 0) {
+                data.blocks.forEach((b, idx) => {
+                    let block;
+                    if (b.type === 'table') block = createTableBlock(b.data);
+                    else if (b.type === 'h1') block = createHeadingBlock(1, b.content);
+                    else if (b.type === 'h2') block = createHeadingBlock(2, b.content);
+                    else if (b.type === 'h3') block = createHeadingBlock(3, b.content);
+                    else if (b.type === 'bullet') block = createListBlock('bullet', b.content);
+                    else if (b.type === 'numbered') block = createListBlock('numbered', b.content, idx + 1);
+                    else if (b.type === 'todo') block = createTodoBlock(b.content, b.checked);
+                    else if (b.type === 'quote') block = createQuoteBlock(b.content);
+                    else if (b.type === 'code') block = createCodeBlock(b.content);
+                    else if (b.type === 'divider') block = createDividerBlock();
+                    else block = createTextBlock(b.content);
+                    if (block) container.appendChild(block);
+                });
+            }
+            updateSaveStatus('saved', 'Loaded');
+            populateTableDataSources();
+        } catch (e) { console.error('Load failed:', e); updateSaveStatus('error', 'Failed to load'); }
+    }
+
+    // =====================
+    // CSV Import
+    // =====================
+    document.getElementById('csvInput').addEventListener('change', async (e) => {
+        if (!e.target.files[0]) return;
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const text = event.target.result;
+            const rows = text.split('\n').map(row => row.split(',').map(cell => cell.trim().replace(/^"|"$/g, '')));
+            const csvData = rows.filter(row => row.some(cell => cell));
+            const container = document.getElementById('blocksContainer');
+            const tableBlock = createTableBlock(csvData);
+            container.appendChild(tableBlock);
+            scheduleAutoSave();
+            populateTableDataSources();
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // Reset input so same file can be imported again
+    });
+
+    async function exportCSV() {
+        const blocks = document.querySelectorAll('#blocksContainer .block');
+        let csvContent = '';
+        blocks.forEach(block => {
+            const table = block.querySelector('table');
+            if (table) {
+                table.querySelectorAll('tr').forEach(row => {
+                    const cells = Array.from(row.querySelectorAll('th, td')).map(cell => `"${cell.textContent}"`);
+                    csvContent += cells.join(',') + '\n';
+                });
+            }
+        });
+        downloadFile(csvContent, 'workspace.csv', 'text/csv');
+    }
+
+    function downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    async function exportPDF() {
+        const title = document.getElementById('pageTitle').value || 'Untitled';
+        const blocksData = [];
+        document.querySelectorAll('#blocksContainer .block').forEach(block => {
+            const content = block.querySelector('.block-content');
+            const graph = block.querySelector('canvas');
+            if (graph) blocksData.push({ type: 'graph', content: graph.toDataURL('image/png') });
+            else if (content) {
+                let type = 'p';
+                if (block.classList.contains('block-h1')) type = 'h1';
+                else if (block.classList.contains('block-h2')) type = 'h2';
+                else if (block.classList.contains('block-h3')) type = 'h3';
+                blocksData.push({ type, text: content.textContent.trim() });
+            }
+        });
+        try {
+            const token = await firebase.auth().currentUser.getIdToken();
+            const response = await fetch('/api/export/document', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ format: 'pdf', title, content: { blocks: blocksData } }) });
+            const blob = await response.blob();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${title}.pdf`; a.click();
+        } catch (e) { alert('PDF Export failed'); }
+    }
+
+    function insertGraph() {
+        const chartType = document.getElementById('chartType').value;
+        const labels = document.getElementById('chartLabels').value.split(',').map(s => s.trim());
+        const values = document.getElementById('chartValues').value.split(',').map(s => parseFloat(s.trim()));
+        const title = document.getElementById('chartTitle').value || 'Chart';
+        document.getElementById('blocksContainer').appendChild(createGraphBlock(chartType, labels, values, title));
+        bootstrap.Modal.getInstance(document.getElementById('graphModal')).hide();
+        scheduleAutoSave();
+    }
+
+    ['chartType', 'chartLabels', 'chartValues', 'chartTitle'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', updatePreviewChart);
+    });
+
+    function updatePreviewChart() {
+        const chartType = document.getElementById('chartType').value;
+        const labels = document.getElementById('chartLabels').value.split(',').map(s => s.trim()).filter(s => s);
+        const values = document.getElementById('chartValues').value.split(',').map(s => parseFloat(s.trim())).filter(v => !isNaN(v));
+        const title = document.getElementById('chartTitle').value || 'Preview';
+        if (labels.length === 0 || values.length === 0) return;
+        const canvas = document.getElementById('previewChart');
+        if (previewChartInstance) previewChartInstance.destroy();
+        previewChartInstance = new Chart(canvas, {
+            type: chartType,
+            data: { labels: labels, datasets: [{ label: title, data: values, backgroundColor: ['rgba(13, 148, 136, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(241, 196, 15, 0.7)'], borderWidth: 2 }] },
+            options: { responsive: true, plugins: { title: { display: true, text: title } } }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveWorkspace(); } });
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "layout.html" %}
+
+{% block title %}Help & Support - Notion Clone{% endblock %}
+
+{% block content %}
+<div class="page-help active p-8">
+    <div class="page-container max-w-5xl mx-auto">
+        <div class="page-header mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 tracking-tight">Help & Support</h1>
+            <p class="text-gray-500 mt-2 text-lg">Learn how to make the most of your collaborative workspace.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            <div
+                class="help-card bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer">
+                <div
+                    class="w-14 h-14 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                    <i class="bi bi-lightning text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Quick Start</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">Master the essentials and set up your first workspace
+                    in minutes.</p>
+            </div>
+
+            <div
+                class="help-card bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer">
+                <div
+                    class="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <i class="bi bi-keyboard text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Shortcuts</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">Boost your productivity with powerful keyboard
+                    commands.</p>
+            </div>
+
+            <div
+                class="help-card bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer">
+                <div
+                    class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <i class="bi bi-puzzle text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Block Types</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">Explore all available content blocks from text to
+                    interactive graphs.</p>
+            </div>
+
+            <div
+                class="help-card bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer">
+                <div
+                    class="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                    <i class="bi bi-chat-dots text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Support</h3>
+                <p class="text-gray-500 text-sm leading-relaxed">Get personalized help from our dedicated support team.
+                </p>
+            </div>
+        </div>
+
+        <div class="max-w-3xl">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8">Frequently Asked Questions</h2>
+            <div class="accordion space-y-4" id="faqAccordion">
+                <div class="accordion-item bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                    <h2 class="accordion-header">
+                        <button
+                            class="w-full text-left px-6 py-4 font-bold text-gray-900 hover:bg-gray-50 transition-colors flex items-center justify-between group"
+                            type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            How do I create new blocks?
+                            <i class="bi bi-chevron-down text-gray-300 group-hover:text-teal-600 transition-colors"></i>
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                        <div class="px-6 py-4 text-gray-500 border-t border-gray-50 leading-relaxed">
+                            Simply type <kbd
+                                class="px-2 py-1 bg-gray-100 rounded text-gray-700 text-xs font-bold font-mono">/</kbd>
+                            in any empty line to open the block menu. Choose from text, headings, lists, quotes, tables,
+                            and more.
+                        </div>
+                    </div>
+                </div>
+                <!-- ... additional FAQ items ... -->
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-900 mt-16 mb-8">Essential Shortcuts</h2>
+            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 divide-y divide-gray-50 overflow-hidden">
+                <div class="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <span class="font-semibold text-gray-700">Open block menu</span>
+                    <kbd
+                        class="px-3 py-1.5 bg-gray-100 rounded-lg text-gray-900 font-bold border-b-2 border-gray-300">/</kbd>
+                </div>
+                <!-- ... additional shortcuts ... -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+# Firebase credentials
+firebase-config.js
+.env
+*.env
+
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/firebase-credentials.json
+
+# Node modules (if using build tools)
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - StudioFlow</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+
+    <style type="text/tailwindcss">
+        :root {
+            --light-teal: #f0f9f9;
+            --soft-mint: #e6f7ed;
+            --vibrant-teal: #0d9488;
+            --teal-900: #134e4a;
+            --charcoal: #334155;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-teal);
+        }
+        .heading-font {
+            font-family: 'Playfair Display', serif;
+        }
+        .auth-card {
+            @apply bg-white p-10 rounded-[2rem] shadow-2xl border border-teal-50 w-full max-w-md transition-all duration-300;
+        }
+        .form-input {
+            @apply w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all;
+        }
+        .btn-auth {
+            @apply w-full py-4 rounded-full font-semibold transition-all duration-300;
+        }
+        .btn-primary-auth {
+            @apply bg-teal-900 text-white hover:bg-teal-950 shadow-lg shadow-teal-900/10;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-[#f0f9f9] to-[#e6f7ed]">
+    <div class="auth-card">
+        <div class="text-center mb-8">
+            <div class="text-3xl font-bold text-teal-900 tracking-tight heading-font mb-2">Studio<span
+                    class="text-teal-500">Flow</span></div>
+            <p class="text-slate-500" id="authSubtitle">Log in to your creative workspace</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm">
+            <button
+                class="w-full flex items-center justify-center gap-3 py-3 border border-slate-200 rounded-full font-medium hover:bg-slate-50 transition-all mb-6"
+                onclick="handleGoogleSignIn()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width="18">
+                Continue with Google
+            </button>
+
+            <div class="flex items-center gap-4 mb-6">
+                <div class="flex-1 h-px bg-slate-100"></div>
+                <span class="text-xs text-slate-400 font-medium">OR</span>
+                <div class="flex-1 h-px bg-slate-100"></div>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                    <input type="email" class="form-input" id="loginEmail" placeholder="your@email.com" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-auth btn-primary-auth mt-2">Log In</button>
+            </form>
+
+            <p class="text-center mt-8 text-sm text-slate-500">
+                Don't have an account? <a class="text-teal-600 font-semibold cursor-pointer hover:underline"
+                    onclick="toggleAuthMode('signup')">Sign up</a>
+            </p>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" style="display: none;">
+            <form onsubmit="handleSignup(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Full Name</label>
+                    <input type="text" class="form-input" id="signupName" placeholder="Alex Rivers" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                    <input type="email" class="form-input" id="signupEmail" placeholder="your@email.com" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" class="form-input" id="signupPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-auth btn-primary-auth mt-2">Create Account</button>
+            </form>
+
+            <p class="text-center mt-8 text-sm text-slate-500">
+                Already have an account? <a class="text-teal-600 font-semibold cursor-pointer hover:underline"
+                    onclick="toggleAuthMode('login')">Log in</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        firebase.initializeApp(window.firebaseConfig);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'signup') {
+            toggleAuthMode('signup');
+        }
+
+        function toggleAuthMode(mode) {
+            document.getElementById('loginForm').style.display = mode === 'login' ? 'block' : 'none';
+            document.getElementById('signupForm').style.display = mode === 'signup' ? 'block' : 'none';
+            document.getElementById('authSubtitle').textContent = mode === 'login' ? 'Log in to your creative workspace' : 'Start your creative journey';
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            firebase.auth().signInWithEmailAndPassword(email, pass)
+                .then(() => window.location.href = '/app/workspace')
+                .catch(err => alert(err.message));
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            const email = document.getElementById('signupEmail').value;
+            const pass = document.getElementById('signupPassword').value;
+            const name = document.getElementById('signupName').value;
+            firebase.auth().createUserWithEmailAndPassword(email, pass)
+                .then((cred) => cred.user.updateProfile({ displayName: name }))
+                .then(() => window.location.href = '/app/workspace')
+                .catch(err => alert(err.message));
+        }
+
+        function handleGoogleSignIn() {
+            var provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider)
+                .then(() => window.location.href = '/app/workspace')
+                .catch(err => alert(err.message));
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Workspace - Notion Clone{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/styles.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-grid-3x3-gap-fill text-teal-600 text-2xl"></i>
+            <span class="heading-font text-2xl font-bold text-teal-900 tracking-tight">Studio<span
+                    class="text-teal-500">Flow</span></span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="nav-item {% if page == 'workspace' %}active{% endif %}" href="/app/workspace">
+                <i class="bi bi-file-text"></i>
+                <span>Workspace</span>
+            </a>
+            <a class="nav-item {% if page == 'workspaces' %}active{% endif %}" href="/app/workspaces">
+                <i class="bi bi-grid-1x2"></i>
+                <span>Switch Workspace</span>
+            </a>
+            <a class="nav-item {% if page == 'team' %}active{% endif %}" href="/app/team" style="position: relative;">
+                <i class="bi bi-people"></i>
+                <span>Team & Members</span>
+                <span id="teamNotificationBadge"
+                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                    style="display: none; font-size: 10px;">
+                    0
+                </span>
+            </a>
+            <a class="nav-item {% if page == 'settings' %}active{% endif %}" href="/app/settings">
+                <i class="bi bi-gear"></i>
+                <span>Settings</span>
+            </a>
+            <a class="nav-item {% if page == 'profile' %}active{% endif %}" href="/app/profile">
+                <i class="bi bi-person-circle"></i>
+                <span>My Profile</span>
+            </a>
+            <a class="nav-item {% if page == 'help' %}active{% endif %}" href="/app/help">
+                <i class="bi bi-question-circle"></i>
+                <span>Help & Support</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a class="nav-item" id="themeToggleBtn" style="cursor: pointer;">
+                <i class="bi bi-moon"></i>
+                <span>Dark Mode</span>
+            </a>
+            <a class="nav-item text-danger" id="logoutBtn" style="margin-top: 5px; cursor: pointer;">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/firebase-config.js"></script>
+    <script src="/firebase-service.js"></script>
+    <script type="module">
+        window.appState = {
+            currentUser: null,
+            workspaceId: 'default-workspace',
+            isConnected: false,
+            db: null,
+            auth: null
+        };
+
+        function initializeFirebase() {
+            try {
+                if (window.firebase && !firebase.apps.length) {
+                    firebase.initializeApp(window.firebaseConfig);
+                }
+                if (window.firebase) {
+                    window.appState.db = firebase.database();
+                    window.appState.auth = firebase.auth();
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('❌ Firebase initialization error:', error);
+                return false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (initializeFirebase()) {
+                firebase.auth().onAuthStateChanged(user => {
+                    if (!user) {
+                        window.location.href = '/auth'; // Redirect to Auth
+                    } else {
+                        window.appState.currentUser = user;
+                        window.appState.isConnected = true;
+
+                        // Save user profile and update notification badge
+                        if (window.firebaseService) {
+                            window.firebaseService.saveUserProfile();
+                            window.firebaseService.subscribeToNotifications((count) => {
+                                const badge = document.getElementById('teamNotificationBadge');
+                                if (badge) {
+                                    if (count > 0) {
+                                        badge.textContent = count;
+                                        badge.style.display = 'inline';
+                                    } else {
+                                        badge.style.display = 'none';
+                                    }
+                                }
+                            });
+                        }
+
+                        // Dispatch event for page-specific logic
+                        window.dispatchEvent(new CustomEvent('authReady', { detail: user }));
+                    }
+                });
+
+                // Logout Logic
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', () => {
+                        firebase.auth().signOut().then(() => {
+                            window.location.href = '/auth';
+                        });
+                    });
+                }
+            }
+
+            // Theme Logic
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.addEventListener('click', () => {
+                    const current = document.documentElement.getAttribute('data-theme') || 'light';
+                    const next = current === 'light' ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', next);
+                    localStorage.setItem('theme', next);
+                });
+            }
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

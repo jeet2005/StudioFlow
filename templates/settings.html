@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+
+{% block title %}Settings - Notion Clone{% endblock %}
+
+{% block content %}
+<div class="page-settings active p-8">
+    <div class="page-container max-w-4xl mx-auto">
+        <div class="page-header mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">Settings</h1>
+            <p class="text-gray-500 mt-1">Manage your workspace preferences and appearance.</p>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Appearance Section -->
+            <div class="settings-section bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i class="bi bi-palette text-teal-600"></i> Appearance
+                </h3>
+                <div class="space-y-6">
+                    <div class="setting-row flex items-center justify-between">
+                        <div class="setting-label">
+                            <h4 class="font-semibold text-gray-900">Dark Mode</h4>
+                            <p class="text-sm text-gray-500">Switch between light and dark themes</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="darkModeToggle" class="sr-only peer">
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600">
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="setting-row flex items-center justify-between">
+                        <div class="setting-label">
+                            <h4 class="font-semibold text-gray-900">Compact Mode</h4>
+                            <p class="text-sm text-gray-500">Reduce spacing between blocks</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="compactModeToggle" class="sr-only peer">
+                            <div
+                                class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600">
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="setting-row flex items-center justify-between">
+                        <div class="setting-label">
+                            <h4 class="font-semibold text-gray-900">Font Size</h4>
+                            <p class="text-sm text-gray-500">Adjust the default text size</p>
+                        </div>
+                        <select
+                            class="form-select w-32 rounded-lg border-gray-200 text-sm focus:ring-teal-500 focus:border-teal-500"
+                            id="fontSizeSelect">
+                            <option value="14">Small</option>
+                            <option value="16" selected>Medium</option>
+                            <option value="18">Large</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data & Export -->
+            <div class="settings-section bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i class="bi bi-download text-teal-600"></i> Data & Export
+                </h3>
+                <div class="setting-row flex items-center justify-between">
+                    <div class="setting-label">
+                        <h4 class="font-semibold text-gray-900">Clear Local Data</h4>
+                        <p class="text-sm text-gray-500">Remove all cached workspace data from this browser</p>
+                    </div>
+                    <button
+                        class="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-semibold"
+                        onclick="clearLocalData()">
+                        Clear Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Theme Logic
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    const currentTheme = localStorage.getItem('theme') || 'light';
+
+    if (darkModeToggle) {
+        darkModeToggle.checked = currentTheme === 'dark';
+        darkModeToggle.addEventListener('change', (e) => {
+            const theme = e.target.checked ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        });
+    }
+
+    function clearLocalData() {
+        if (confirm('Are you sure you want to clear all local data?')) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+</script>
+{% endblock %}

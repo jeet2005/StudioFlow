@@ -1,0 +1,320 @@
+{% extends "layout.html" %}
+
+{% block title %}Team Members - StudioFlow{% endblock %}
+
+{% block content %}
+<div class="page-team active p-8">
+    <div class="page-container max-w-4xl mx-auto">
+        <!-- My Pending Invites (Invites sent TO me) -->
+        <div id="myPendingInvitesSection" class="mb-8" style="display: none;">
+            <div class="bg-gradient-to-r from-teal-500 to-teal-600 text-white p-6 rounded-2xl shadow-lg">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="bi bi-envelope-open text-2xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg">You have pending team invitations!</h4>
+                        <p class="opacity-90">Accept or decline invitations below</p>
+                    </div>
+                </div>
+                <div id="myPendingInvitesList" class="space-y-3">
+                    <!-- Invites will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="team-header flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 leading-tight">Team Members</h1>
+                <p class="text-gray-500 mt-1" id="workspaceNameDisplay">Manage access to this workspace and collaborate
+                    with others.</p>
+            </div>
+            <button
+                class="bg-teal-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-teal-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                onclick="showInviteModal()">
+                <i class="bi bi-person-plus"></i> Invite Member
+            </button>
+        </div>
+
+        <!-- Current Members -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+            <div class="p-4 bg-gray-50 border-b border-gray-100">
+                <h3 class="font-bold text-gray-700">Current Members</h3>
+            </div>
+            <div class="team-container divide-y divide-gray-100" id="membersList">
+                <div class="p-6 text-center text-gray-400">
+                    <div class="spinner-border spinner-border-sm" role="status"></div>
+                    Loading members...
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Invites Sent FROM This Workspace -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-4 bg-amber-50 border-b border-amber-100">
+                <h3 class="font-bold text-amber-700 flex items-center gap-2">
+                    <i class="bi bi-clock-history"></i> Invitations Sent
+                </h3>
+            </div>
+            <div class="divide-y divide-gray-100" id="invitesList">
+                <div class="p-6 text-center text-gray-400">
+                    Loading invites...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Invite Modal -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Invite Teammate</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="inviteEmail" placeholder="colleague@example.com">
+                </div>
+                <p class="text-muted small">They will receive an invitation to join this workspace. They can accept or
+                    decline from the Team page.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendInvite()">Send Invitation</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let inviteModal;
+
+    window.addEventListener('firebaseReady', async () => {
+        inviteModal = new bootstrap.Modal(document.getElementById('inviteModal'));
+        await loadMyPendingInvites();
+        await loadTeamData();
+    });
+
+    // Load invites sent TO ME (that I can accept/decline)
+    async function loadMyPendingInvites() {
+        try {
+            const invites = await window.firebaseService.getPendingInvites();
+            const section = document.getElementById('myPendingInvitesSection');
+            const list = document.getElementById('myPendingInvitesList');
+
+            if (invites.length > 0) {
+                section.style.display = 'block';
+                list.innerHTML = '';
+
+                invites.forEach(invite => {
+                    const div = document.createElement('div');
+                    div.className = 'bg-white/10 backdrop-blur rounded-xl p-4 flex items-center justify-between';
+                    div.id = `invite-${invite.id}`;
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                <i class="bi bi-folder text-xl"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold">${invite.workspaceName}</h5>
+                                <p class="text-sm opacity-80">from ${invite.inviterEmail || 'a team member'}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="acceptInvite('${invite.id}', '${invite.workspaceId}')" class="bg-white text-teal-600 px-4 py-2 rounded-lg font-bold hover:bg-teal-50 transition-all flex items-center gap-1">
+                                <i class="bi bi-check-lg"></i> Accept
+                            </button>
+                            <button onclick="declineInvite('${invite.id}', '${invite.workspaceId}')" class="bg-white/20 text-white px-4 py-2 rounded-lg font-bold hover:bg-white/30 transition-all">
+                                Decline
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                section.style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Error loading my invites:', e);
+        }
+    }
+
+    async function acceptInvite(inviteId, workspaceId) {
+        try {
+            await window.firebaseService.respondToInvite(inviteId, workspaceId, 'accept');
+
+            // Remove the invite card with animation
+            const card = document.getElementById(`invite-${inviteId}`);
+            if (card) {
+                card.style.transition = 'all 0.3s';
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(20px)';
+                setTimeout(() => card.remove(), 300);
+            }
+
+            // Show success message
+            alert('🎉 You have joined the workspace! Redirecting...');
+
+            // Switch to the new workspace
+            window.firebaseService.setCurrentWorkspace(workspaceId);
+            window.location.href = '/app/workspace';
+        } catch (e) {
+            console.error('Error accepting invite:', e);
+            alert('Failed to accept invitation');
+        }
+    }
+
+    async function declineInvite(inviteId, workspaceId) {
+        if (!confirm('Are you sure you want to decline this invitation?')) return;
+
+        try {
+            await window.firebaseService.respondToInvite(inviteId, workspaceId, 'reject');
+
+            // Remove the invite card
+            const card = document.getElementById(`invite-${inviteId}`);
+            if (card) {
+                card.style.transition = 'all 0.3s';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300);
+            }
+
+            // Check if there are more invites
+            setTimeout(async () => {
+                await loadMyPendingInvites();
+            }, 400);
+
+        } catch (e) {
+            console.error('Error declining invite:', e);
+            alert('Failed to decline invitation');
+        }
+    }
+
+    async function loadTeamData() {
+        const workspaceId = window.firebaseService?.getCurrentWorkspaceId();
+
+        if (!workspaceId) {
+            document.getElementById('membersList').innerHTML = `
+                <div class="p-6 text-center">
+                    <p class="text-gray-500 mb-4">No workspace selected.</p>
+                    <a href="/app/workspaces" class="btn btn-primary">Select a Workspace</a>
+                </div>
+            `;
+            return;
+        }
+
+        try {
+            // Get workspace info
+            const workspace = await window.firebaseService.getWorkspace(workspaceId);
+            if (workspace) {
+                document.getElementById('workspaceNameDisplay').textContent = `Managing "${workspace.name}" workspace`;
+            }
+
+            // Get members
+            const members = await window.firebaseService.getWorkspaceMembers(workspaceId);
+            const membersList = document.getElementById('membersList');
+            membersList.innerHTML = '';
+
+            if (members.length > 0) {
+                members.forEach(member => {
+                    const isOwner = member.role === 'owner';
+                    const isCurrentUser = member.uid === firebase.auth().currentUser?.uid;
+
+                    const row = document.createElement('div');
+                    row.className = 'p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full ${isOwner ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'} flex items-center justify-center font-bold text-xl">
+                                ${(member.displayName || member.email || 'U')[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900">${member.displayName || 'User'} ${isCurrentUser ? '(You)' : ''}</h4>
+                                <p class="text-gray-500 text-sm">${member.email || 'No email'}</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 ${isOwner ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'} rounded-full text-xs font-bold uppercase tracking-wider">
+                            ${member.role}
+                        </span>
+                    `;
+                    membersList.appendChild(row);
+                });
+            } else {
+                membersList.innerHTML = '<div class="p-6 text-center text-gray-400">No members found</div>';
+            }
+
+            // Get pending invites sent from this workspace
+            const invites = await window.firebaseService.getWorkspaceInvites(workspaceId);
+            const invitesList = document.getElementById('invitesList');
+            invitesList.innerHTML = '';
+
+            const pendingInvites = invites.filter(i => i.status === 'pending');
+
+            if (pendingInvites.length > 0) {
+                pendingInvites.forEach(invite => {
+                    const row = document.createElement('div');
+                    row.className = 'p-6 flex items-center justify-between hover:bg-amber-50/50 transition-colors';
+                    row.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xl">
+                                ${invite.email[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900">${invite.email.split('@')[0]}</h4>
+                                <p class="text-gray-500 text-sm">${invite.email}</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wider">
+                            Pending
+                        </span>
+                    `;
+                    invitesList.appendChild(row);
+                });
+            } else {
+                invitesList.innerHTML = '<div class="p-6 text-center text-gray-400 italic">No pending invitations</div>';
+            }
+
+        } catch (e) {
+            console.error('Error loading team:', e);
+        }
+    }
+
+    function showInviteModal() {
+        const workspaceId = window.firebaseService?.getCurrentWorkspaceId();
+        if (!workspaceId) {
+            alert('Please select a workspace first.');
+            window.location.href = '/app/workspaces';
+            return;
+        }
+        document.getElementById('inviteEmail').value = '';
+        inviteModal.show();
+    }
+
+    async function sendInvite() {
+        const email = document.getElementById('inviteEmail').value.trim();
+        if (!email) {
+            alert('Please enter an email address');
+            return;
+        }
+
+        const workspaceId = window.firebaseService?.getCurrentWorkspaceId();
+        if (!workspaceId) {
+            alert('No workspace selected');
+            return;
+        }
+
+        try {
+            await window.firebaseService.inviteToWorkspace(workspaceId, email);
+            inviteModal.hide();
+            alert('✅ Invitation sent to ' + email + '!');
+            await loadTeamData();
+        } catch (e) {
+            console.error('Error sending invite:', e);
+            alert('Failed to send invitation');
+        }
+    }
+</script>
+{% endblock %}

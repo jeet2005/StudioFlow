@@ -1,0 +1,267 @@
+{% extends "layout.html" %}
+
+{% block title %}My Profile - Notion Clone{% endblock %}
+
+{% block content %}
+<div class="page-profile active p-8">
+    <div class="page-container max-w-4xl mx-auto">
+        <div class="page-header mb-12">
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">My Profile</h1>
+            <p class="text-gray-500 mt-1">Manage your account details and security settings.</p>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Pending Invitations (Priority Section) -->
+            <div id="pendingInvitesSection"
+                class="settings-section bg-gradient-to-br from-teal-50 to-white p-8 rounded-2xl shadow-sm border border-teal-100"
+                style="display: none;">
+                <h3 class="text-lg font-bold text-teal-900 mb-6 flex items-center gap-2">
+                    <i class="bi bi-envelope-open-fill text-teal-600"></i>
+                    Pending Team Invitations
+                    <span id="inviteCountBadge"
+                        class="bg-teal-600 text-white text-xs px-2 py-1 rounded-full ml-2">0</span>
+                </h3>
+                <div id="pendingInvitesList" class="space-y-4">
+                    <!-- Invites will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Personal Info -->
+            <div class="settings-section bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 mb-8 flex items-center gap-2">
+                    <i class="bi bi-person-lines-fill text-teal-600"></i> Personal Information
+                </h3>
+
+                <div class="flex flex-col md:flex-row gap-12">
+                    <div class="flex flex-col items-center gap-4">
+                        <div class="w-32 h-32 rounded-full bg-teal-600 text-white flex items-center justify-center text-5xl font-bold shadow-lg"
+                            id="profileAvatarBig">
+                            U
+                        </div>
+                        <p class="text-sm font-semibold text-gray-400 uppercase tracking-widest">Avatar</p>
+                    </div>
+
+                    <div class="flex-grow space-y-6">
+                        <div class="grid grid-cols-1 gap-6">
+                            <div>
+                                <label
+                                    class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Display
+                                    Name</label>
+                                <input type="text"
+                                    class="w-full px-4 py-3 rounded-xl border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all font-medium"
+                                    id="profileDisplayName" placeholder="Your Name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Email
+                                    Address</label>
+                                <input type="email"
+                                    class="w-full px-4 py-3 rounded-xl border-gray-100 bg-gray-50 text-gray-500 font-medium cursor-not-allowed"
+                                    id="profileEmail" readonly>
+                                <p class="mt-2 text-xs text-gray-400">Email addresses are managed through your account
+                                    provider.</p>
+                            </div>
+                        </div>
+                        <button
+                            class="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-md hover:shadow-lg mt-4"
+                            onclick="updateProfile()">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div class="settings-section bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 mb-8 flex items-center gap-2">
+                    <i class="bi bi-shield-lock text-teal-600"></i> Security
+                </h3>
+                <div class="max-w-md space-y-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">New
+                            Password</label>
+                        <input type="password"
+                            class="w-full px-4 py-3 rounded-xl border-gray-200 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                            id="profileNewPassword" placeholder="Minimum 6 characters">
+                    </div>
+                    <button
+                        class="bg-amber-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md hover:shadow-lg"
+                        onclick="updatePassword()">
+                        Update Password
+                    </button>
+                </div>
+            </div>
+
+            <!-- My Workspaces -->
+            <div class="settings-section bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i class="bi bi-grid-1x2 text-teal-600"></i> My Workspaces
+                </h3>
+                <div id="myWorkspacesList" class="space-y-3">
+                    <p class="text-gray-400">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.addEventListener('firebaseReady', async (e) => {
+        const user = window.firebaseService.currentUser;
+
+        // Load profile info
+        document.getElementById('profileDisplayName').value = user.displayName || '';
+        document.getElementById('profileEmail').value = user.email || '';
+        if (user.email) {
+            document.getElementById('profileAvatarBig').textContent = user.email[0].toUpperCase();
+        }
+
+        // Load pending invites
+        await loadPendingInvites();
+
+        // Load workspaces
+        await loadMyWorkspaces();
+    });
+
+    async function loadPendingInvites() {
+        try {
+            const invites = await window.firebaseService.getPendingInvites();
+            const section = document.getElementById('pendingInvitesSection');
+            const list = document.getElementById('pendingInvitesList');
+            const badge = document.getElementById('inviteCountBadge');
+
+            if (invites.length > 0) {
+                section.style.display = 'block';
+                badge.textContent = invites.length;
+                list.innerHTML = '';
+
+                invites.forEach(invite => {
+                    const div = document.createElement('div');
+                    div.className = 'p-6 bg-white rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-teal-100 transition-all hover:shadow-md';
+                    div.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-teal-600 text-white rounded-xl flex items-center justify-center shadow-md">
+                                <i class="bi bi-people-fill text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900 text-lg">${invite.workspaceName}</h4>
+                                <p class="text-teal-600 text-sm">Invited by ${invite.inviterEmail || 'a team member'}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 w-full md:w-auto">
+                            <button onclick="respondToInvite('${invite.id}', '${invite.workspaceId}', 'accept')" class="flex-1 md:flex-none bg-teal-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-md">
+                                <i class="bi bi-check-lg me-1"></i> Accept
+                            </button>
+                            <button onclick="respondToInvite('${invite.id}', '${invite.workspaceId}', 'reject')" class="flex-1 md:flex-none bg-white text-gray-600 border border-gray-200 px-6 py-2.5 rounded-xl font-bold hover:bg-gray-50 transition-all">
+                                Decline
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                section.style.display = 'none';
+            }
+        } catch (e) {
+            console.error('Error loading invites:', e);
+        }
+    }
+
+    async function respondToInvite(inviteId, workspaceId, action) {
+        try {
+            await window.firebaseService.respondToInvite(inviteId, workspaceId, action);
+
+            if (action === 'accept') {
+                alert('You have joined the workspace! Redirecting...');
+                window.firebaseService.setCurrentWorkspace(workspaceId);
+                window.location.href = '/app/workspace';
+            } else {
+                alert('Invitation declined.');
+                await loadPendingInvites();
+            }
+        } catch (e) {
+            console.error('Error responding to invite:', e);
+            alert('Failed to respond to invitation');
+        }
+    }
+
+    async function loadMyWorkspaces() {
+        try {
+            const workspaces = await window.firebaseService.listWorkspaces();
+            const list = document.getElementById('myWorkspacesList');
+            list.innerHTML = '';
+
+            if (workspaces.length > 0) {
+                workspaces.forEach(ws => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer';
+                    div.onclick = () => {
+                        window.firebaseService.setCurrentWorkspace(ws.id);
+                        window.location.href = '/app/workspace';
+                    };
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <i class="bi bi-grid-1x2 text-teal-600"></i>
+                            <span class="font-medium">${ws.name}</span>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full ${ws.role === 'owner' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}">${ws.role}</span>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                list.innerHTML = '<p class="text-gray-400 italic">No workspaces yet. <a href="/app/workspaces" class="text-teal-600 hover:underline">Create one</a></p>';
+            }
+        } catch (e) {
+            console.error('Error loading workspaces:', e);
+        }
+    }
+
+    async function updateProfile() {
+        const displayName = document.getElementById('profileDisplayName').value;
+        try {
+            const token = await firebase.auth().currentUser.getIdToken();
+            const res = await fetch('/api/user/profile', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ displayName })
+            });
+            if (res.ok) {
+                alert('Profile updated!');
+                // Also update in Firebase service
+                await window.firebaseService.saveUserProfile();
+            } else {
+                alert('Update failed');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error updating profile');
+        }
+    }
+
+    async function updatePassword() {
+        const password = document.getElementById('profileNewPassword').value;
+        if (!password || password.length < 6) {
+            alert("Password must be at least 6 characters");
+            return;
+        }
+        try {
+            const token = await firebase.auth().currentUser.getIdToken();
+            const res = await fetch('/api/user/password', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            if (res.ok) {
+                alert('Password updated!');
+                document.getElementById('profileNewPassword').value = '';
+            } else {
+                const d = await res.json();
+                alert('Failed: ' + d.error);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+</script>
+{% endblock %}
