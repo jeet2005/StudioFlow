@@ -39,7 +39,7 @@ Create `backend/firebase-credentials.json` with your Firebase Admin SDK credenti
 Create `backend/.env`:
 
 ```
-FIREBASE_DATABASE_URL=https://to-do-8d03e-default-rtdb.firebaseio.com
+FIREBASE_DATABASE_URL=FIREBASE_DATABASE_URL
 JWT_SECRET_KEY=your-random-secret-key-here
 ```
 
