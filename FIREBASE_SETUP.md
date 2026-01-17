@@ -6,17 +6,15 @@ Create a file named `firebase-config.js` in the root directory with the followin
 
 ```javascript
 const firebaseConfig = {
-  apiKey: "AIzaSyBLMEco0gu32CUtYI88TGz5CJtdKnrkw7g",
-  authDomain: "to-do-8d03e.firebaseapp.com",
-  databaseURL: "https://to-do-8d03e-default-rtdb.firebaseio.com",
-  projectId: "to-do-8d03e",
-  storageBucket: "to-do-8d03e.firebasestorage.app",
-  messagingSenderId: "156052254494",
-  appId: "1:156052254494:web:e298f63d3617ec46c3a30f",
-  measurementId: "G-KL08TW2JH6"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
 };
-
-export default firebaseConfig;
+window.firebaseConfig = firebaseConfig;
 ```
 
 ## Enable Authentication in Firebase Console
