@@ -6,9 +6,9 @@ A Notion-like collaborative workspace application with real-time synchronization
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![Firebase](https://img.shields.io/badge/Firebase-Realtime%20Database-orange)
 
-## ✨ Features
+##  Features
 
-### 📝 Rich Content Editor
+###  Rich Content Editor
 - **Block-based editing** - Text, headings, lists, quotes, code blocks, tables
 - **Slash commands** - Type `/` to insert any block type
 - **MS Word-style lists** - Auto-numbering and bullet continuation
@@ -16,24 +16,24 @@ A Notion-like collaborative workspace application with real-time synchronization
 - **Right-click menu** - Copy, cut, paste, delete blocks
 - **Auto-save** - Changes saved automatically to cloud
 
-### 📊 Data Visualization
+###  Data Visualization
 - **7 chart types** - Bar, Line, Pie, Doughnut, Radar, Polar Area, Scatter
 - **Table to Graph** - Generate charts from table data with one click  
 - **Export graphs** - Download as PNG, JPG, or SVG
 - **CSV Import/Export** - Work with spreadsheet data
 
-### 👥 Team Collaboration
+###  Team Collaboration
 - **Invite teammates** - Send email invitations
 - **Accept/Decline invites** - Manage invitations from Team page
 - **Role-based access** - Owner and Member roles
 - **Real-time notifications** - Badge shows pending invites
 
-### 🔐 Authentication & Security
+###  Authentication & Security
 - **Firebase Authentication** - Email/password login
 - **Secure API** - Token-based authentication
 - **User profiles** - Manage your account settings
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |-------|------------|
@@ -44,7 +44,7 @@ A Notion-like collaborative workspace application with real-time synchronization
 | Charts | Chart.js |
 | Export | ReportLab (PDF), Matplotlib |
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Python 3.8 or higher
@@ -99,7 +99,7 @@ A Notion-like collaborative workspace application with real-time synchronization
    http://localhost:5000
    ```
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 studioflow/
@@ -123,7 +123,7 @@ studioflow/
 └── README.md
 ```
 
-## 🎯 Usage
+##  Usage
 
 ### Creating Content
 1. Click on the workspace area
@@ -147,7 +147,7 @@ studioflow/
 - **CSV** - Click "Export CSV" for table data
 - **Graph Images** - Click PNG/JPG/SVG on any chart
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables (optional)
 ```bash
@@ -182,7 +182,7 @@ SECRET_KEY=your-secret-key
 }
 ```
 
-## 📝 API Endpoints
+##  API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -192,7 +192,7 @@ SECRET_KEY=your-secret-key
 | `/api/user/profile` | POST | Update user profile |
 | `/api/user/password` | POST | Change password |
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -200,11 +200,11 @@ SECRET_KEY=your-secret-key
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - [Firebase](https://firebase.google.com/) - Backend as a Service
 - [Chart.js](https://www.chartjs.org/) - Charts library
